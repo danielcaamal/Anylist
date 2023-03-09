@@ -24,3 +24,5 @@ yarn start:dev
 ```
 localhost:3000/graphql
 ```
+
+7. Ejecutar la mutation "executeSeed" para poblar la base de datos
