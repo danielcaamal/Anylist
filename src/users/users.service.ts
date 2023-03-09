@@ -4,6 +4,8 @@ import { SingUpInput } from 'src/auth/dto/inputs/sign-up.input';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isInstance } from 'class-validator';
+import { ValidRoles } from '../auth/enums/valid-roles.enum';
+import { UpdateUserInput } from './dto/inputs/udpate-user.input';
 
 @Injectable()
 export class UsersService {
@@ -24,8 +26,22 @@ export class UsersService {
     }
   }
 
-  async findAll() : Promise<User[]> {
-    return [];
+  async findAll(validRoles: ValidRoles[]) : Promise<User[]> {
+    try {
+      if (validRoles.length === 0) return await this.usersRepository.find({
+        relations: ['lastUpdateBy']
+      });
+
+      return await this.usersRepository.createQueryBuilder()
+        .andWhere('ARRAY[roles] && ARRAY[:...roles]')
+        .setParameters({ roles: validRoles })
+        .getMany();
+      
+    }
+    catch (error) {
+      this.handleDBErrors(error);
+    }
+    
   }
 
   async findOneByEmail(email: string): Promise<User> {
@@ -46,8 +62,31 @@ export class UsersService {
     }
   }
 
-  block(id: string): Promise<User> {
-    throw NotImplementedException;
+  async blockUserById(id: string, blockedBy: User): Promise<User> {
+    try {
+      var user = await this.findOneById(id);
+      user.isActive = false;
+      user.lastUpdateBy = blockedBy;
+      return await this.usersRepository.save(user);
+    }
+    catch (error) {
+      this.handleDBErrors(error);
+    }
+  }
+
+  async update(
+    id: string, 
+    updateUserInput: UpdateUserInput, 
+    updateBy:User
+    ): Promise<User> {
+    try {
+      var user = await this.usersRepository.preload({});
+      user.lastUpdateBy = user;
+      return await this.usersRepository.save(user);
+    }
+    catch (error) {
+      this.handleDBErrors(error);
+    }
   }
 
   private handleDBErrors(error: any): never {
