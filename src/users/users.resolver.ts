@@ -10,13 +10,16 @@ import { UpdateUserInput } from './dto/inputs';
 import { ItemsService } from 'src/items/items.service';
 import { Item } from '../items/entities/item.entity';
 import { FilterArgs, PaginationArgs } from 'src/common/dtos/args';
+import { ListService } from 'src/list/list.service';
+import { List } from 'src/list/entities/list.entity';
 
 @Resolver(() => User)
 @UseGuards(JwtAuthGuard)
 export class UsersResolver {
   constructor(
     private readonly usersService: UsersService,
-    private readonly itemsService: ItemsService
+    private readonly itemsService: ItemsService,
+    private readonly listService: ListService
   ) {}
 
   @Query(() => [User], { name: 'users' })
@@ -67,5 +70,23 @@ export class UsersResolver {
     @Args() filterArgs: FilterArgs,
   ): Promise<Item[]> {
     return this.itemsService.findAll(user, paginationArgs, filterArgs);
+  }
+
+  @ResolveField(() => Int, { name: 'listCount' })
+  async listCount(
+    @CurrentUser([ValidRoles.admin]) adminUser: User,
+    @Parent() user: User,
+  ): Promise<number> {
+    return this.listService.listCountByUser(user);
+  }
+
+  @ResolveField(() => [List], { name: 'lists' })
+  async getListsByUser(
+    @CurrentUser([ValidRoles.admin]) adminUser: User,
+    @Parent() user: User,
+    @Args() paginationArgs: PaginationArgs,
+    @Args() filterArgs: FilterArgs,
+  ): Promise<List[]> {
+    return this.listService.findAll(user, paginationArgs, filterArgs);
   }
 }
